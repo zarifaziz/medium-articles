@@ -1,0 +1,146 @@
+This article is a review of a state-of-the-art 3D instance segmentation paper called SGPN. Link to the original paper here by Weiyue Wang, Ronald Yu, Qiangui Huang and Ulrich Neumann.
+
+The basic structure of this article is as follows:
+
+– Introduction
+– Model Architecture
+– Results
+– Conclusion
+
+What is 3D Instance Segmentation?
+Instance segmentation in the 3D space is a challenging computer vision task that requires the detection of separate instances of every class from a 3D point cloud. For each point, we need to output semantic class +instance ID. For example, from a scan of a room, detect chair 1, chair 2, desk 1, desk 2, etc.
+
+Motivation behind SGPN
+The literature for 3D instance segmentation and object detection lags far behind its 2D counterpart
+Using CNNs on 3D volumetric data is limited by high memory and computational cost
+Able to leverage recent research: Deep learning frameworks such as PointNet and PointNet++ on point clouds open up more efficient and flexible ways to handle 3D data
+Various applications in autonomous driving and robotics
+Main Contribution of the paper
+Novel Representation of 3D instance segmentation in the form of a Similarity Matrix.
+
+In their method, they regress the likelihood of two points belonging to the same group and formulates the similarity matrix as group proposals to handle a variable number of instances.
+
+They believe that a similarity matrix is a more natural and straightforward representation for 3D instance segmentation on a point cloud compared to traditional 2D instance segmentation representations, which involve segmenting a binary mask of the object.
+
+Model Architecture
+Press enter or click to view image in full size
+
+The pipeline of the system for point cloud instance segmentation
+The great thing about SGPN is that it is a very simple and intuitive framework. As shown in the image above, it first passes a point cloud P of size Np through a feed-forward feature extraction network inspired by PointNets, learning both global and local features in the point cloud. This feature extraction network produces a matrix F.
+
+SGPN then diverges into three branches that each pass F through a single PointNet layer into:
+
+A Similarity learning branch. This produces a feature matrix F_sim which is used to obtain the similarity matrix
+A Confidence learning branch. This produces a feature matrix F_cf which is used to obtain a confidence map
+A Semantic segmentation branch. This produces a feature matrix F_sem which is used to obtain the semantic segmentation map
+The loss L is given by the sum of the losses from each of these three branches.
+
+Total loss is the sum of the Similarity loss, Confidence loss, and Semantic Segmentation loss
+To illustrate the architecture of the model, I’ll be using the 5-point example below as a running example. The points are in the feature matrix F:
+
+Branch 1: Similarity learning branch
+Press enter or click to view image in full size
+
+Input
+F: Feature vector for every point in the point cloud [Np x Nf]
+
+Process
+
+Pass data through an additional Pointnet layer to obtain similarity feature matrix FSIM [Np x Nf ]. Each point P_i is embedded in the feature space
+Create Similarity Matrix S where, for each pair of points {Pi, Pj}, Sij is the L2 distance of the corresponding feature vectors
+
+Output
+Similarity matrix S
+
+Press enter or click to view image in full size
+
+Double Hinge Loss for Similarity Matrix
+
+Press enter or click to view image in full size
+
+Since the semantic segmentation branch is wrongly trying to bring pairs of points in the same class together, the α > 1 term is added to increase the weight of the 2nd loss to dominate the gradient from the semantic segmentation output branch. α is set to 2 initially and then increased by 2 every 5 epochs.
+
+K1= 1 and K2= 2 are added to set the ceilings of the respective losses.
+
+Branch 2: Confidence learning branch
+This branch produces a confidence map that is used to prune proposals.
+
+Press enter or click to view image in full size
+
+Input
+F: Feature vector for every point in the pointcloud [Np x Nf ]
+
+Become a Medium member
+Process
+
+Pass data through additional Pointnet Layer to obtain Confidence Map CM [Np x 1 ] reflecting the confidence for each proposal/point
+Process for learning confidence
+
+Predicted CMi ←from NN
+Ground truth CMi = IOU( Si, Gi )
+Loss LCF is the L2 loss between the inferred and expected CM
+Snippet of code from the Authors below (link here):
+
+Press enter or click to view image in full size
+
+After looking at the code from the authors, I’m a bit sceptical about the learning process as the loss function is very rough. This is because we’re using logical AND and OR functions which can produce very unstable loss scores.
+
+Output
+Confidence Map CM. This matrix is used to discard proposals with predicted confidence values less than the Th_C threshold or cardinality less than Th_M2.
+
+In our example below, the proposal generated by point 3 is discarded because it has a low confidence score. This makes intuitive sense as point 3 is somewhat in the centre of all the 5 points and it’s not clear which group it belongs to.
+
+This process of discarding happens in the GroupMerging algorithm, which is talked about in two sections below.
+
+Branch 3: Semantic Segmentation branch
+This branch produces a semantic label for each point in the point cloud/
+
+Press enter or click to view image in full size
+
+Input
+F: Feature vector for every point in the point cloud [Np x Nf]
+
+Process
+I didn’t expand on this section as it is a standard point-wise classifier and is well explained from the paper.
+
+Output
+Semantic segmentation matrix M_SEM. The output is an Np × Nc sized matrix where Nc is the number of possible object categories. M_SEM_ij corresponds to the probability that point Pi belongs to class Cj.
+
+GroupMerging Algorithm for pruning proposals:
+The similarity Matrix S produces Np proposals, many of which are noisy or represent the same object.
+
+A lot of work is done in pruning the Np proposals generated by the Similarity Matrix S through a process called GroupMerging. I have illustrated some of the things done in this algorithm using the example below.
+
+Press enter or click to view image in full size
+
+GroupMerging Process
+
+Similarity Matrix S converted to the boolean matrix using S < Th_S (0.11)
+Proposal 3 eliminated due to C < 0.1 (confidence threshold)
+Proposals with less than Th_M2 are dropped
+Groups with IOU greater than Th_M1 (0.6) are merged together (Non-Maximum suppression) by selecting a group with bigger Th_M2 (200). Proposal 1 will be merged with proposal 2 and proposal 5 will be merged with proposal 4
+If a point belongs to more than one final group proposal, it is randomly assigned to each group (~ 2%). In our example, point ‘3’ is randomly assigned to one of the two proposals
+Results
+The results from the SGPN process look very promising. They evaluated their models on 3DIS and ShapeNet datasets.
+
+Stanford 3D Indoor Semantic Segmentation Dataset (3DIS)
+They validate their results against their own process called Seg-Cluster which is not ideal.
+
+Press enter or click to view image in full size
+
+ShapeNet part segmentation
+Press enter or click to view image in full size
+
+Limitations
+Because the pairwise similarity matrix grows quadratically as Np increases, it can’t handle many points. At train time, 4096 points are uniformly sampled into blocks of area 1m x 1m. At test time, all points in a 1m x 1m block are used
+They validate their results against their own process called Seg-Cluster which is not ideal
+Their Confidence Map CM loss function seems very unstable
+Their code is hard to read and reimplement
+SGPN is a relatively old paper (2017). New approaches from 2020 include 3D-MPA and OccuSeg which have better results
+Conclusion
+Personally, it was hard for me to get similar results when I tried to replicate the paper. The loss function was very unstable and the model wasn’t able to generalise to a wide range of problems.
+
+Regardless, SGPN was a very interesting paper with its unique representation of the 3D instancing problem as a Similarity Matrix, and the idea of using a separate process to prune and fix the instance proposals that get predicted.
+
+For more information on this paper, have a look below:
+https://paperswithcode.com/paper/sgpn-similarity-group-proposal-network-for-3d

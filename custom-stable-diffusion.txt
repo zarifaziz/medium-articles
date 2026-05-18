@@ -1,0 +1,167 @@
+archive.today
+webpage capture
+Saved from
+https://zarif-aziz.medium.com/tutorial-running-a-custom-stable-diffusion-img2img-pipeline-60f7cbd6766a
+no other snapshots from this url
+22 Jan 2026 22:56:21 UTC
+All snapshots from host zarif-aziz.medium.com
+WebpageScreenshot
+sharedownload .zipreport bug or abuseBuy me a coffee
+Search
+Write
+Sign up
+Sign in
+
+How to run a Custom Stable Diffusion pipeline with GPUs: A Python Tutorial
+Zarif Aziz
+Zarif Aziz
+7 min read
+·
+Oct 25, 2023
+--
+
+2
+
+Press enter or click to view image in full size
+
+image-to-image pipeline in Stable Diffusion
+As a Software / ML Engineer without access to GPUs, if you want to run a custom Stable Diffusion (SD) pipeline with only Python code + a Cloud engine of your choice, this tutorial is meant to help you avoid a deep online rabbit hole.
+I’ve implemented an example of a Stable Diffusion pipeline in the img2img-pipeline repo below.
+GitHub - zarifaziz/img2img-pipeline: Custom Stable Diffusion img2img pipeline
+Custom Stable Diffusion img2imipeline . Contribute to zarifaziz/img2img-pipeline development by creating an account…
+github.com
+We will also go through how to best get access to GPUs and CUDA environments to run it.
+Is this tutorial right for you?
+Most guides online talk about how to train these large models, not about running inference. Even if the tutorial is about running the model, it usually points to an online platform (e.g. Dreamstudio), a desktop app (e.g. DrawThings.ai), or an inference endpoint (e.g. Replicate) that does everything for you. But if you want to own the entire Python code used to run inference on the model, then there’s not much available. Which is why I created this tutorial.
+This article came out of a project I did a few weeks ago. My goal was to create a text-guided image-to-image pipeline where you could pass in some images and style them in a particular way based on the prompts you entered.
+My rules were the following:
+
+- No Jupyter Notebooks / Google Colab. I wanted it to be a Python package.
+- No web UIexternal desktop tools that I would have to install on my laptop
+- I wanted it to be a GPU-enabled pipeline
+- It would be simple enough that I can deploy it anywhere I choose, whether that be Google Cloud, AWS, or a local computer with GPUs.
+  This guide will not explain how the model works. If you are interested, you should check out the Stable Diffusion with 🧨 Diffusers blog post or The Annotated Diffusion Model.
+  My setup
+  My trusty Macbook. Which unfortunately doesn’t have a GPU
+  Conda for environment management. Usually, I only use Poetry for my environments but had to forego that in order to get CUDA-enabled PyTorch.
+  Lambda labs for access to GPUs. My first call after recognizing the severe lack of A100 GPU instances with AWS and GCP
+  Let’s get started
+  We’ll break down the process into 4 steps.
+  Press enter or click to view image in full size
+
+STEP 1: Choose a Cloud GPU Provider and get your environment set up
+Acquiring a GPU instance can be a time-consuming and occasionally frustrating process as menabled instances on the major cloud computing providers (GCP, AWS) are taken.
+I found that Lambda Labs had the easiest access to GPUs at a low cost. All the instances also come pre-installed with the Lambda Stack which contains Pytorch and the NVIDIA libraries such as CUDA and cuDNN.
+Press enter or click to view image in full size
+
+Make an account and connect your bank account 💸
+Pick any instance size you like and click “Launch instance”
+Once the instance is running, click the “Launch” button on the right to launch the Cloud IDE which opens up Jupyter Lab.
+Press enter or click to view image in full size
+
+I chose to utilize the Jupyter Lab setup because it conveniently comes pre-installed with CUDA, Pytorch, and Conda, which is beneficial even if you don’t intend to use Jupyter notebooks. Alternatively, if you prefer a manual installation, you can begin the process here. It’s worth noting that when installed via Conda, Pytorch includes a suitable CUDA runtime.
+Click on the “Terminal” optiand you can use the following to check if you have GPUs with CUDA enabled
+
+# to check if you have a GPU
+
+nvidia-smi
+
+# to check if you have CUDA enabled
+
+python -c "import torch; print(torch.cuda.is_available())
+Press enter or click to view image in full size
+
+Running the commands to verify I have a GPU with CUDA enabled ✅
+Once you have access to the instance with CUDA-enabled Pytorch installed, we can start to explore the img2img-pipeline GitHub repo.
+Even if you don’t have CUDA enabled, that’s fine. The pipeline should still work, it will just be slower and you will not be using the GPUs.
+STEP 2: Set up the img2img-pipeline repo
+Details are all on the README file of the repo here. But I’ll outline the steps below anyway.
+GitHub - zarifaziz/img2img-pipeline: Custom Stable Diffusion img2img pipeline
+Custom Stable Diffusion img2img pipeline . Contribute to zarifaziz/img2img-pipeline development by creating an account…
+github.com
+Press enter or click to view image in full size
+
+To get started, download
+git clone https://github.com/zarifaziz/img2img-pipeline.git
+Install requirements by running
+
+# enter the repo
+
+cd img2img-pipeline
+
+# install requirements
+
+pip install -r requirements.txt
+
+# some extra libraries needing manual install
+
+pip install typer diffusers transformers loguru accelerate xformers
+STEP 3: Generate some images! 🚀
+Navigate to the data/input_images folder and upload some images that you want to stylize. The images can be in any format.
+
+You can run the pipeline to make sure it’s all working with
+python -m src.img2img_pipeline.commands.main run_pipeline
+
+The command above processes all the images in the data/input_images directory all at once, picking a different model and prompteach time from the lists it has stored in src/im2img_pipeline/constants.py. Here are what the lists currently have:
+
+If you want to run img2img on a single image with more control instead, you can do so with:
+python -m src.img2img_pipeline.commands.main \
+run_single_image_pipeline example_image.png \
+--prompt "in style of picasso" \
+--model "stabilityai/stable-diffusion-2"
+Most importantly, feel free to fork the repo and make changes to it as you wish! It’s very easy to extend it to your use cases. In the next section, we’ll be going through some of the images you can generate with this pipeline.
+Some of my generations 🖼
+😸 The model captured Salvador Dali’s artistic style very well in this one.
+Press enter or click to view image in full size
+
+🏰 I loved the fact that it replaced the view of the Three Sisters rock formation perfectly with a castle.
+Press enter or click to view image in full size
+
+Understanding what’s happening in the img2img-pipeline package
+The overall project structure of the repo is this:
+.
+├── README.md
+├── data
+│ ├── input_images
+│ └── output_images
+├── metrics.md
+│ Metrics of the pipeline runs such as time, memory
+├── requirements.txt
+└── src
+└── img2img_pipeline
+Application source code
+All the source code over a single image is implemented in the following lines of code in src/img2img_pipeline/commands/main.py
+
+It consists of only ~20 lines of code because the model class Img2ImgModel and the pipeline class DiffusionSingleImagePipeline are abstracted away in src/img2img_pipeline/model.py and src/img2img_pipeline/pipeline.py respectively.
+Details of the Img2ImgModel in model.py
+Press enter or click to view image in full size
+
+The code in this class was heavily inspired by the Diffusers library I talked about earlier. I strongly recommend going through their official docs and tutorials here:
+Diffusers
+We're on a journey to advance and democratize artificial intelligence through open source and open science.
+huggingface.co
+I took lots of tips and tricks from this library to make the pipeline GPU memory efficient as well as fast. I would suggest reading through the README file in the repo to go through all the features — I won’t double up by talking about them here.
+Conclusion and Action Points
+In this guiwe saw a clear path to run a custom Stable Diffusion img2img pipeline using Python and Lambda Labs. You’ve seen how to set up your environment, access GPU resources, and use the img2img-pipeline repository to generate stylized images. It took me nearly two days to figure out when I began, so you’re ahead of the curve!
+Now, you have the power to create your own image-to-image transformations and tweak the prompts and settings as you go along. Whether you choose to use this on Google Cloud, AWS, or locally, you have the flexibility to deploy it anywhere.
+Action points for you:
+Explore the img2img-pipeline repo: Download the repository, install the requirements, and start generating images. You can use the provided prompts and models or customize your own.
+Play around with the settings such as strength and guidance_scale
+Benchmark the speeds and memory efficiency between different settings. I shared some initial findings in the repo.
+Extend and Experiment with the repo: Feel free to fork the repo and tailo to your specific use cases. Experiment with different models, prompts, and image styles.
+I hope you find it valuable and inspiring. Happy image styling!
+Stable Diffusion
+Lambda Labs
+Generative Art
+Python Programming
+Gpu
+--
+
+2
+
+Zarif Aziz
+Written by Zarif Aziz
+22 followers
+·
+21 following
+AI Engineer | Here to share some stories of all things tech | linkedin.com/in/zarifaziz/

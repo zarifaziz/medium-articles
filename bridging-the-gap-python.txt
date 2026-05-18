@@ -1,0 +1,601 @@
+Discover how to apply Domain-Driven Design principles to Python projects, creating scalable enterprise software for AI applications.
+
+Press enter or click to view image in full size
+
+An Evolution of Python in the Age of AI
+Python is experiencing rapid growth. With AI companies scaling rapidly and transforming from startups to the next Fortune 500 companies, it’s time to face the music: our hacky Python scripts are evolving into (dare I say) enterprise software.
+
+Because of all this, a significant gap is emerging in the area of enterprise software. While languages like Java and C# have long embraced frameworks to tackle complex projects, such as Domain-Driven Design (DDD), these are still lacking within the Python ecosystem.
+
+In this article, we dive into how we can easily apply these popular architectural principles, using a simple Python project (that you can download) to demonstrate how it all fits together.
+
+Why I Wrote This Article
+When I started in the AI / Machine learning field, I couldn’t the primary goal was to write scalable software. But after spending 5+ years in this space, I feel like I’ve finally discovered a solid reference architecture that supports the development of scalable, enterprise-grade software using Python. My goal is to share my insights and experiences, focusing on the principles of Domain-Driven Design (DDD) and the Repository Pattern.
+
+I hope that this serves as both a guide for fellow developers and a personal archive of my learning journey.
+
+Motivating from Personal Experience
+In a recent project, we faced the challenge of migrating our enterprise RAG app from one database to another. It was a project with 20,000+ lines of code that our team had been working on for more than a year.
+
+However, our scalable architecture proved its worth, facilitating a surprisingly smooth transition:
+
+A dedicated database layer allowed us to switch databases without impacting core business logic
+Encapsulated ML model logic in a separate module enabled experimentation with different mels
+Independent testing of each layer ensured reliable validation of all components
+This experience underscored the importance of this architecture for me, and why I wanted to share it here.
+
+Disclaimer: Please note that Domain Driven Design isn’t for simple web apps, but complex enterprise software. If you’re building a simple application, this might be overkill.
+
+A Sneak Peek
+Before reading further, here’s a sneak peek GIF to show how the architecture will evolve throughout this post.
+
+Press enter or click to view image in full size
+
+Evolution of our software architecture over time
+Why do our Software Designs Go Wrong?
+Most developers know that a new project always starts with clean, well-structured code. However, new features and quick patches often lead to a tangled mess as time passes, making the application more difficult to maintain and extend. This phenomenon is a common pitfall, especially in complex enterprise software.
+
+Software systems naturally tend towards chaos, often resulting in what wn as a “big ball of mud”. This term describes a software system with no perceivable architecture, where everything is tightly coupled, and changes in one part of the system can cause unexpected issues elsewhere.
+
+Press enter or click to view image in full size
+
+You can analogise it to how a well-tended garden is a highly ordered system. But without deliberate effort, the garden would run wild. Weeds and grasses would cover everything until every part looked the same — wild and unmanaged. To keep order in the garden (and in software), it takes energy and direction to prevent the wilderness from taking over.
+
+Some of the symptoms include:
+Global state is scattered everywhere
+Huge classes with thousands of lines of code
+Business logic classes performing I/O operations.
+Everything is coupled with everything else, making changes perilous
+Moving into a more concrete application diagram, this is what your application could turn into when left alone.
+
+Press enter or click to view image in full size
+
+Softwaretecture Resembling a “big ball of mud”, where everything is coupled to everything else
+Fortunately, the techniques to avoid creating a ball of mud aren’t complex. Throughout this article, we’ll apply some techniques to improve the architecture above.
+
+Managing Complexity
+Press enter or click to view image in full size
+
+We need to adopt specific architectural principles and patterns to prevent our software from devolving into chaos. The key steps we will cover are below:
+
+Step 1: Encapsulation and Abstractions
+
+Step 2: Layering
+
+Step 3: Dependency Inversion Principle (DIP)
+
+Step 4: Domain Modeling
+4.1: Repository Pattern
+4.2: Service Layer
+
+Conclusion
+
+And without further ado, let’s jump into it!
+
+Step 1: Encapsulation and Abstractions
+As programmers, we naturally encapsulate our code behind abstractions e.g. functions. Hence they are two closely related ideas.
+
+To illustrate these concepts, we’ll use a model “car software” example throughout this article. Let’s call the project car_archited the final version of the code base for the car_architecure project on my Github here:
+
+GitHub - zarifaziz/domain-driven-design-demo
+Contribute to zarifaziz/domain-driven-design-demo development by creating an account on GitHub.
+github.com
+
+In the example below, we demonstrate encapsulation by hiding the internal details of the Engine and Transmission classes. The Car class interacts with these components through well-defined interfaces (start and engage methods), without needing to know their internal workings. This encapsulation makes it easier to manage and modify the system, as changes within the Engine or Transmission classes do not affect the Car class.
+
+# Example : Encapsulating the components of a car classes (abstractions)
+
+class Engine:
+    def __init__(self, horsepower):
+        self.horsepower = horsepower
+    
+    def start(self):
+        print(f"Engine with {self.horsepower} HP started.")
+
+class Transmission:
+    def __init__(self, type):
+        self.type = type
+    
+    def engage(self):
+        print(f"{self.type} transmission engaged.")
+
+class Car:
+    def __init__(self, engine, transmission):
+        self.engine = engine
+        self.transmission = transmission
+    
+    def drive(self):
+        self.engine.start()
+        self.transmission.engage()
+        print("Car is now driving.")
+
+# Usage
+engine = Engine(150)
+transmission = Transmission("Automatic")
+car = Car(engine, transmission)
+car.drive()
+On top of encapsulation, abstraction allows us to change these modules independently, thus reducing coupling between modules.
+
+Press enter or click to view image in full size
+
+We can reduce the degree of coupling within a system by abstracting away the details. System A and System B shrink in size as complexity decreases
+To demonstrate abstraction, we’ll define a Transmission interface with an engage method. The Car class will depend on this interface, allowing us to swap out different implementations of Transmission.
+
+from abc import ABC, abstractmethod
+
+# Transmission Interface
+class Transmison(ABC):
+    @abstractmethod
+    def engage(self):
+        pass
+
+class AutomaticTransmission(Transmission):
+    def engage(self):
+        print("Automatic transmission engaged.")
+
+class ManualTransmission(Transmission):
+    def engage(self):
+        print("Manual transmission engaged.")
+
+class Car:
+    def __init__(self, engine, transmission: Transmission):
+        self.engine = engine
+        self.transmission = transmission
+    
+    def drive(self):
+        self.engine.start()
+        self.transmission.engage()
+        print("Car is now driving.")
+
+engine = Engine(150)
+automatic_transmission = AutomaticTransmission()
+manual_transmission = ManualTransmission()
+
+car_with_auto = Car(engine, automatic_transmission)
+car_with_manual = Car(engine, manual_transmission)
+You’ll see a more concrete example of how an abstraction is used in Step 3.
+
+Step 2: Layering
+Layering divides the code into discrete roles, making it easier to manage and evolve.
+
+Common layers include:
+
+Presentation layer
+Business Logic Layer
+Dabase / Infrastructure layer
+Now our software architecture diagram can take a cleaner shape.
+
+
+Adding layers to our architecture to divide code into discrete roles
+Following this, our car_architecture project’s folder structure would look something like this:
+
+car_architecture/
+├── README.md
+├── src/
+│   ├── presentation_layer/
+│   │   ├── command_line_app.py
+│   │   └── api.py
+│   ├── business_logic_layer/
+│   │   ├── car_service.py
+│   │   ├── engine.py
+│   │   └── transmission.py
+│   └── database_layer/
+│       ├── in_memory_database.py
+│       └── sql_database.py
+└── tests/
+    ├── test_car_service.py
+    ├── test_engine.py
+    └── test_transmission.py
+This is commonly known as a layered architecture and is a common approach to structuring a system that has a UI, some logic, and a database. Django’s Model-View-Template structure and Model-View-Controller architecture are two iples, so you may have heard of it before. Let’s define what DIP means.
+
+Dependency Inversion is the strategy of depending upon interfaces or abstract functions and classes rather than upon concrete functions and classes.
+
+Following this rule, let’s add some abstraction layers to our current architecture.
+
+Press enter or click to view image in full size
+
+Adding two abstraction layers so we can decouple the layers of our software.
+Another part of DIP’s formal definition is that higher-level components should not depend on a lower level. Both should depend on abstractions.
+
+This is where we can use our knowledge of abstractions from step 1.
+
+
+Applying the two concepts of DIP. Concept 1 is that everything depends on abstractions. Concept 2 is that higher-level components should not depend on lower-level components.
+Why do we need to do this?
+
+The motivation behind DIP is that high-level modules contain the business logic that your organisation cares about (e.g. dealing with patients, or managing an invoio they should be protected. We want high-level modules to be easily changed in response to business needs.
+
+In contrast, low-level modules are the code your organisation doesn’t care about. It’s not likely that the customer team cares about the filesystem or type of database used. Low-level modules are also generally harder to change compared to high-level modules. E.g. imagine changing a function name vs changing a column name in a database.
+
+The first part of our DIP definition said our business logic shouldn’t depend on details; instead, both should depend on abstractions. This is so that these modules are decoupled and we can change them independently of each other. We don’t want business logic / high-level changes to slow down because they are closely coupled to low-level infrastructure details.
+
+Become a member
+When all of this is done right, it makes the system more flexible and easier to modify.
+
+Step 4: Domain Modeling
+This is the most important section of this article where we see the fullcture and its benefits. We will first introduce the Domain Model pattern, which is a way to build and encapsulate our business logic layer. We will then implement abstractions onto our infrastructure layer and presentation layer which will produce the Repository layer and Service layer respectively.
+
+The Domain Model Layer is simply the Business Logic Layer that’s decoupled from technical concerns
+
+One of the most common symptoms of software turning into a ball of mud is when our business logic spreads throughout the layers of our application. We can avoid this by allocating this layer exclusively for business logic and not letting it go anywhere else.
+
+This is the part of the code that is closest to the business, and hence is the place where you deliver the most value of the business.
+
+E.g. a part of the domain model for the car software’s engine would look like this:
+
+# src/domain/engine_model.py
+
+from dataclasses import dataclass, field
+from typing import List
+
+@dataclass
+class EngineModel:
+    engin: str
+    horsepower: int
+    _is_running: bool = field(default=False, init=False)
+
+    def start(self):
+        if not self._is_running:
+            self._is_running = True
+            print(f"Engine {self.engine_id} with {self.horsepower} HP started.")
+        else:
+            print(f"Engine {self.engine_id} is already running.")
+
+    def stop(self):
+        if self._is_running:
+            self._is_running = False
+            print(f"Engine {self.engine_id} stopped.")
+        else:
+            print(f"Engine {self.engine_id} is not running.")
+
+    def set_running(self, is_running: bool):
+        self._is_running = is_running
+
+    @property
+    def is_running(self):
+        return self._is_running
+Key Features of the Domain Layer
+Encapsulated Business Logic: All the business logic is neatly encapsulated within the domain model. This ensures that the logic related to the domain remains centralized and is not scattered across the application.
+Separation of Concerns: The business logic is completely free from technical concerns. The domain model focuses solely on the business rules and processes, without any dependency on how data is stored or retrieved.
+Independence: The domain layer does not depend on any other part of the system. As seen in the example, it imports no other modules from the car_architecture package, relying only on standard libraries. This independence is crucial for maintaining a clean and modular architecture.
+As the domain layer doesn’t depend on anything, and everything depends on it, we can see all the arrows pointing inward towards it. This is also known as the onion architecture.
+
+
+Our Business Logic layer is now the Domain Layer. We can think of this layer as being on the “inside”, with dependencies/arrows flowing inward to it; this is what people sometimes call the “onion architecture”
+4.1: Repository Pattern
+The repository pattern is an abstraction over persistent storage. It is an abstraction that hides the details of data access and provides a simple interface for the er to interact with the data layer.
+
+
+The Repository Pattern simplifies data access by acting as a mediator between the Application Layer and the Database Layer, while keeping the Domain Model Objects independent.
+A way of loosening dependency on ORM
+Domain models are typically created using an Object Relational Mapper (ORM), which offers the advantage of persistence ignorance. This means that the domain model doesn’t need to be aware of how data is stored or retrieved. However, if you follow the standard SQLAlchemy tutorial, you might end up with a domain model heavily dependent on the ORM.
+
+# src/domain/engine_model.py
+
+from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+
+Base = declarative_base()
+
+# Define the Engine model
+class EngineModel(Base):
+    __tablename__ = 'engines'
+    id = Column(Integer, primary_key=True)
+    engine_id = Column(String, unique=True, nullable=False)
+  horsepower = Column(Integer, nullable=False)
+    is_running = Column(Boolean, default=False)
+
+...
+In the example above, the domain layer imports sqlalchemy and EngineModel is polluted with ORM syntax such as Column etc.
+
+Inverting ORM Dependency into the Repository Pattern
+The alternative is to define your schema separately and to define an explicit mapper for how to convert between the schema and our domain model
+
+Step 1: Define modules to initialise schema, mappers and database connections
+
+# src/orm/mapper.py
+# responsible for defining table schema and mapping the
+# domain model to the table
+
+from sqlalchemy import Boolean, Column, Integer, MetaData, String, Table
+from sqlalchemy.orm import mapper
+
+from ..domain.engine_model import EngineModel
+
+metadata = MetaData()
+
+engines = Table(
+    "engines",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("engine_id", String(255), unique=True, nullable=False),
+    Column("horsepower", Integer, nullable=False),
+    Column("is_running", Boolean, default=False),
+)
+
+def start_mappers():
+    mapper(EngineModel, engines)
+# src/orm/setup.py
+# responsible for setting up the database connection and creating the table
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from .mapper import metadata, start_mappers
+
+DATABASE_URL = "sqlite:///:memory:"
+engine = create_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(bind=engine)
+
+def init_db():
+    start_mappers()
+    metadata.create_all(engine)
+Step 2: We define the Repository Interface
+
+# src/repository/base_engine_repository.py
+from abc import ABC, abstractmethod
+from typing import List
+
+from ..domain.engine_model import EngineModel
+
+class BaseEngineRepository(ABC):
+    @abstractmethod
+    def add(self, engine: EngineModel) -> None:
+        pass
+
+    @abstractmethod
+    def get(self, engine_id: str) -> EngineModel:
+        pass
+
+    @abstractmethod
+    def update(self, engine: EngineModel) -> None:
+        pass
+
+    @abstractmethod
+    def delete(self, engine_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def list(self) -> List[EngineModel]:
+        pass
+Step 3: We implement the Repository with SQLAlchemy
+
+# src/repository/sql_alchemy_engine_repository.py
+from typing import List
+
+from sqlalchemy.orm import Session
+
+from ..domain.engine_model import EngineModel
+from .base_engine_repository import BaseEngineRepository
+
+class SQLAlchemyEngineRepository(BaseEngineRepository):
+    def __init__(self, session: Session):
+        self.session = session
+
+    def add(self, engine: EngineModel) -> None:
+        self.session.add(engine)
+
+    def get(self, engine_id: str) -> EngineModel:
+        return (
+            self.session.query(EngineModel)
+            .filter(EngineModel.engine_id == engine_id)
+            .first()
+        )
+
+    def update(self, engine: EngineModel) -> None:
+        existing_engine = self.get(engine.engine_id)
+        if existing_engine:
+            existing_engine.horsepower = engine.horsepower
+            existing_engine.set_running(
+                engine.is_running
+            )
+            # Use the public method to update the attribute
+
+    def delete(self, engine_id: str) -> None:
+        engine = self.get(engine_id)
+        if engine:
+            self.session.delete(engine)
+
+    def list(self) -> List[EngineModel]:
+        return self.session.query(EngineModel).all()
+Step 4: And now our entry point command might look like the following
+
+# src/main.py
+
+from .domain.engine_model import EngineModel
+from .orm.setup import SessionLocal, init_db
+from .repository.sql_alchemy_engine_repository import SQLAlchemyEngineRepository
+
+def main():
+    init_db()
+    session = SessionLocal()
+    repository = SQLAlchemyEngineRepository(session)
+
+    # Add a new engine
+    new_engine = EngineModel(engine_id="ENG1234", horsepower=300)
+    repository.add(new_engine)
+    session.commit()
+
+    session.close()
+
+if __name__ == "__main__":
+    main()
+Key Differences After Adding the Repository Layer
+Decoupled Domain Model: The src/orm/mapper.py file imports the domain model using from ..domain.engine_model import EngineModel, not the other way around. The domain model stays joyfully unaware of the database.
+Database Table Definitions: We define our database tables and columns using SQLAlchemy’s abstractions, providing a clear separation between the domain model and the database schema.
+Seamless Mapping: When we call the mapper function, SQLAlchemy binds our domain model classes to the defined tables. This allows us to easily load and save domain model instances to and from the database. By calling start_mappers, we enable this functionality while keeping our domain model classes unaware of the underlying database operations.
+Simplified Data Storage: The Repository Pattern abstracts away the complexities of data storage and retrieval, making it easier to test and maintain the code. We could go as far as removing the ORM entirely, but we won’t cover that in this post.
+Swappable Storage Mechanisms: This pattern facilitates the swapping of data storagehanisms without affecting the rest of the application. For example, we can replace SQLAlchemyEngineRepository with TinyDBEngineRepository with minimal changes to the codebase.
+In one of our major projects, I recently faced the task of migrating an application from one database to another. Thanks to the repository pattern, the migration process was remarkably smooth. All necessary modifications were confined to the repository layer, sparing the rest of the codebase from any disruption. This experience, which I mentioned earlier, underscores the value of the repository pattern in maintaining a scalable and adaptable architecture, ultimately saving us countless hours of work.
+
+Below is the current application architecture with the addition of the repository layer. The diagram might not make complete sense yet, but we will fill in the top abstraction in the next section.
+
+Press enter or click to view image in full size
+
+Adding in the repository layer, which is an abstraction over data storage. It depends on the domain layer and the database (arrows pointing out) and the top-level abstraction depends on it (arrow pointing in)
+The Repository layer makes it easy to write tests
+An added benefit of using the repository pattern is that now we can fake a repository very easily for testing. A fake repository means it doesn’t have any real connections to any database, it persists the data in memory.
+
+from typing import List
+
+from ..domain.engine_model import EngineModel
+from .base_engine_repository import BaseEngineRepository
+
+class FakeEngineRepository(BaseEngineRepository):
+    def __init__(self):
+        self.engines = {}
+
+    def add(self, engine: EngineModel) -> None:
+        self.engines[engine.engine_id] = engine
+
+    def get(self, engine_id: str) -> EngineModel:
+        return self.engines.get(engine_id)
+
+    def update(self, engine: EngineModel) -> None:
+        if engine.engine_id in self.engines:
+            self.engines[engine.engine_id] = engine
+
+    def delete(self, engine_id: str) -> None:
+        if engi_id in self.engines:
+            self.engines.pop(engine_id)
+
+    def list(self) -> List[EngineModel]:
+        return list(self.engines.values())
+Because the methods in a repository class are so simple, they can be easily replicated. The power of the FakeEngineRepository can be seen in the next section.
+
+4.2: Service Layer
+The final concept introduced in this article is the Service Layer. This layer orchestrates workflows and defines the use cases of the system. It acts as an abstraction between the domain model and the outside world, coordinating tasks and managing transactions.
+
+In our example below, it follows a bunch of simple steps:
+
+Gets some data about the car from the database
+Updates the domain model (engine)
+Persists any changes
+# src/services/car_service.py
+
+from ..repository.base_engine_repository import BaseEngineRepository
+from ..domain.engine_model import EngineModel
+
+class CarService:
+    def __init__(self, engine_repository: BaseEngineRepository):
+        self.engine_repository = engine_repository
+
+    def add_engine(self, engine_id: str, horsepower: int) -> None:
+        engine = EngineModel(engine_id=engine_id, horsepower=horsepower)
+        self.engine_repository.add(engine)
+
+    def start_engine(self, engine_id: str) -> None:
+        engine = self.engine_repository.get(engine_id)
+        if engine:
+            engine.start()
+            self.engine_repository.update(engine)
+We’ve now completed the look of our clean software architecture for enterprise apps below.
+
+Press enter or click to view image in full size
+
+Adding in the “service layer” as a bridge between the domain layer and the presentation layer. The app is driven by receiving requests through the service layer and talking to the repository layer and the domain layer.
+The addition of the service layer allows our Presentation layer (CLI apps and APIs) to be very thin and easy to write. They can simply invoke the service layer, which prevents any business logic from seeping into the presentation layer. We won’t go into the of the presentation layer in this article.
+
+Discussion on Testing: Tests are now super fast and easy!
+By combining the Service Layer with the Repository layer abstraction, we can write fast tests not just for the domain model but for the entire workflow of a service/use case.
+
+Here’s where our FakeEngineRepository will come in handy; it lets us test our service layer and domain layer with nice, fast unit tests.
+
+# tests/services/test_car_service.py
+
+import unittest
+from typing import List
+
+from src.domain.engine_model import EngineModel
+from src.repository.base_engine_repository import BaseEngineRepository
+from src.services.car_service import CarService
+
+class FakeEngineRepository(BaseEngineRepository):
+    def __init__(self):
+        self.engines = {}
+
+    def add(self, engine: EngineModel) -> None:
+        self.engines[engine.engine_id] = engine
+
+    def get(self, engine_id: str) -> EngineModel:
+        return self.engines.get(engine_id)
+
+    def update(self, engine: EngineModel) -> None:
+        if enge.engine_id in self.engines:
+            self.engines[engine.engine_id] = engine
+
+    def delete(self, engine_id: str) -> None:
+        if engine_id in self.engines:
+            self.engines.pop(engine_id)
+
+    def list(self) -> List[EngineModel]:
+        return list(self.engines.values())
+
+class TestCarService(unittest.TestCase):
+    def setUp(self):
+        self.engine_repository = FakeEngineRepository()
+        self.car_service = CarService(self.engine_repository)
+
+    def test_add_engine(self):
+        self.car_service.add_engine("engine1", 100)
+        engine = self.engine_repository.get("engine1")
+        self.assertIsInstance(engine, EngineModel)
+        self.assertEqual(engine.horsepower, 100)
+
+    def test_start_engine(self):
+        self.car_service.add_engine("engine1", 100)
+        self.car_service.start_engine("engine1")
+        engine = self.engine_repository.get("engine1")
+        self.assertTrue(engine.is_running)
+
+if __name__ == "__main__":
+    unittest.main()
+Here’s a visual example of t dependencies during runtime and test time. During test time, we can remove the dependency on a real database and still test the entire app.
+
+Press enter or click to view image in full size
+
+A comparison of dependencies during runtime and test time showcases how the system can be tested without relying on a real database by using a fake repository. This approach simplifies and speeds up testing, ensuring reliable and thorough validation of the application’s functionality.
+This makes testing easier and faster, ensuring that the system behaves as expected under various conditions. The test pyramid for this architecture also looks good, with lots of fast unit tests covering most of the functionality, and a few integration tests and end-to-end tests.
+
+Discussion of Some Disadvantages
+While the principles of Domain-Driven Design, the Repository Pattern, and the Service Layer offer numerous benefits, there are some potential drawbacks to consider:
+
+Additional Complexity: Every time we introduce a new domain objt, we must create a corresponding repository class for each database type. This can add to the development workload and increase the complexity of the codebase.
+Test Maintenance: If the structure of the repository layer or service layer changes, tests may become outdated. However, they might still pass if the implementation of the FakeEngineRepository remains unchanged, potentially leading to misleading test results.
+Learning Curve: The extensive use of abstractions, while beneficial for modularity and flexibility, can make it challenging for new developers to understand and navigate the codebase. This can slow down onboarding and development speed.
+That’s it!
+Our architecture is now complete.
+
+Press enter or click to view image in full size
+
+To tie it all together visually, this is what our final repository structure looks like.
+
+car_architecture/
+├── README.md
+├── poetry.lock
+├── pyproject.toml
+└── src/
+    ├── domain/
+    │   └── engine_model.py
+    ├── main.└── setup.py
+    ├── repository/
+    │   ├── base_engine_repository.py
+    │   └── sql_alchemy_engine_repository.py
+    └── services/
+        └── car_service.py
+└── tests/
+    └── services/
+        └── test_car_service.py
+You can find the full code base for the car_architecture project on my Github here. I’ve renamed the project to domain-driven-design-demo .
+
+GitHub - zarifaziz/domain-driven-design-demo
+Contribute to zarifaziz/domain-driven-design-demo development by creating an account on GitHub.
+github.com
+
+Conclusion
+By following the principles of Domain-Driven Design and utilising the Repository Layer and Service layer, we can manage complexity and create scalable, maintainable enterprise applications. Encapsulation, layering, dependency inversion, and domain modelling are essential strategies to prevent our software from devolving into a “big ball of mud.”
+
+A special shoutout to the book, Architecture Patterns with Python, from which I haening my understanding of these concepts and their practical applications.
+
+I hope you found this article valuable and the diagrams helped you understand the concepts. Happy coding!

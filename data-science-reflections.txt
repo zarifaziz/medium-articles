@@ -1,0 +1,99 @@
+Straight after graduating from uni, I knew I wanted to get into a data science/machine learning role.
+
+Even though I had a software development job lined up in a large company, I wanted to take my chances at something I was more passionate about. After applying to a bunch of places, I was lucky enough to land a data science role at Abyss Solutions.
+
+Press enter or click to view image in full size
+
+Abyss is a technology company that’s using cutting-edge robotics, software, and AI to revolutionise how critical assets are maintained. This includes tasks from managing the onset of corrosion on oil platforms, to inspecting underwater dams and waterways using robots. With my background in Mechatronic Engineering, it was a good fit for me to start my career.
+
+The last year has been a rollercoaster. I’ve done work ranging from being the technical lead on a project to staring at cockroaches while going through pipe footage. I wanted to share my journey through all of it, from having no idea what a data sci/machine learning engineer role would entail, to having at least some idea of what it is now. Something an old me would want to read and for the future me to look back on.
+
+Disclaimer: Every data science role is different. Two roles in two different companies probably contain completely different work. Keeping that in mind, I have included examples in this article that can apply broadly to most scenarios :)
+
+Without further ado, let’s jump into my 5 main takeaways from the past year.
+
+Here are the 5 main takeaways from the past year
+1. My monitor now looks like a hacker screen
+During the steep learning curve of the first few months of the job, one of my first challenges was to get comfortable using a Linux system and working on the command line.
+
+Press enter or click to view image in full size
+
+I got my first exposure to the command line and basic bash commands during university, but using it in my job has changed the way I work profoundly.
+
+Once I got the hang of using the command line, I would say it’e of the best tools at my disposal and an essential skill. After the initial hurdle of memorising all the bash commands I needed, I now have a swiss army knife bunch of tools to manipulate data, manage filesystems and run programs.
+
+Press enter or click to view image in full size
+
+How I feel when using the command line...
+It also lets me easily access and work on remote servers (bigger and faster computers on the network) which I always need to process large amounts of data that my laptop can’t handle. Read this article if you’re interested in some of the commands I’m talking about.
+
+The best thing is, my terminal now looks like something out of a hacker movie, freaking out my housemates whenever I’m WFH.
+
+2. Working on different problems every day is very exciting and is one of the best parts of my job.
+Press enter or click to view image in full size
+
+At Abyss, I’m part of an internal innovation team that solves critical problems which bring big efficiency gains to the company. We also focus on bototypes of our core products such as corrosion detection, fault detection etc.
+
+We work on a wide range of critical problems so there’s never a dull moment. It’s a fast-paced job where we change our focus frequently depending on what the company needs. It’s important to strike the right balance in these situations; to have the energy to learn new information through research and meetings, while also blocking out time for focused work and dive deep into one problem.
+
+Become a member
+Here are some general examples of the wide range of problems we solved/are solving as a team:
+
+The first one is obvious; continuously improving our machine learning models. We are always adding new features to our model development infrastructure and figuring out ways we can improve our ML products.
+Writing tools to automatically generate reports from faults we detect in underwater inspection videos
+Clustering different parts in a point-cloud (picture below) to get useful information out of it
+Press enter or click to view in full size
+
+We process the unlabelled point-cloud (left) and identify the different parts (right)
+The role always forces me to learn more.
+
+3. Be prepared to wear many hats and be involved in all facets of the data lifecycle.
+Press enter or click to view image in full size
+
+My work varies quite a lot from week to week, and it’s now something I expect to happen. This is mostly because ‘data science’ is a vague term, which can basically cover any quantitative work. You could argue that there is no accepted definition of a Data Scientist. On top of that, Abyss still runs like a startup in many ways where everyone in the team has a lot of responsibility and is involved in a wide variety of work. Each day is different:
+
+Some days I do work related to my definition of ‘data science’, which is developing machine learning models/algorithms to tackle different challenges, and exploring techniques to gain more useful information from data.
+Some days I do data engineering, which involves onboarding new clinto our system, housekeeping it according to our data model and many other niche tasks. Data engineering also involves creating and managing labels to increase the training dataset for our machine learning models.
+A lot of the time I’m also a classic software engineer, where I am building core applications and functions which are needed to process data and add new capabilities to our products.
+Most weeks I do a combination of all three types of work that I mentioned above. For now, I’m really glad that I get to work on different stages of the data lifecycle as it gives me great experience and an appreciation of the whole process.
+
+An example of all these skills coming to use is during a new project we received to inspect Flare Stacks (video below). I was the technical lead for this project which was a great experience.
+
+
+Example of a Flare Stack inspection using a drone
+What I didn’t mention yet is that we also had to spend a lot of time planning all of the work. Planning is the best use of time in thnning as we can work out how many people we need in the project, at what times we need them and how we can get everything done most efficiently.
+
+4. When a team works on a project every day, a lot can get done.
+Press enter or click to view image in full size
+
+I try to aim big because a lot can get done when you’re working with a team of smart and driven people. Before joining Abyss I was accustomed to university assignments, where you would spend a few weeks at most to work on a project and so the scope would be very small.
+
+In a company environment, you usually already have the skills necessary within your team to get the job done. So it’s more about applying those skills to a new problem or project, which is a lot faster.
+
+My team consists of only 4 people, but every week I see huge progress being made towards adding improvements to our products and efficiencies gained. Last quarter, we had seemingly planned an impossible amount of work to be done, and we had low confidence in finishing it. But sure eh, once we started working on the problems, we made it through.
+
+The main success factor lies in how I applied myself, planned the project and solved the problems that come up. When I struggled, the team always helped me. This is why you should always punch above your own weight. Take on more than you think you should, and believe in yourself to get it done.
+
+5. Know your software engineering
+Press enter or click to view image in full size
+
+An age-old saying:
+
+The most important skill that is often lacking in data scientists is the ability to write decent code
+
+This is true in a lot of cases because the priorities in our roles are different. In my experience, we’re more focused on implementing a working solution (prototype) first and an efficient and fully-tested application second. And that’s okay. What’s important to me is to always be eager to improve my software engineering skills through additional work that comes through.
+
+What’s been great at Abyss is that I’ve been assigned many software e tasks during my time, such as building core applications and functions for our various products. This way, I could improve my coding skills along the way.
+
+Press enter or click to view image in full size
+
+Writing a few hundred lines of code in a clean and maintainable way is a learned skill. Some lessons are best learnt with time. When I had to update dependencies or add functionality to the code that I wrote a few months ago, I was either very happy or angry with myself based on how easy it was to update it.
+
+Some of the basic skills anyone should learn are debugging code using an IDE, version control and writing tests for applications. If you didn’t come from a computer science background, I would also highly recommend doing a Data Structure and Algorithms course online to teach you the basics.
+
+The biggest benefit of being a strong software engineer is that you won’t have to wait on other people to help you when you’re stuck debugging code. You can unblock yourself which is always faster and more iated by everyone. With that being said, I still ask for help from my colleagues when I’m stuck and brainstorming solutions to a problem is part of the fun.
+
+Thank you for reading!
+And thus concludes my reflections on the past year. There are a lot of topics that I didn’t cover, but the ones I mentioned had the biggest impact on me.
+
+It’s been fun writing this, and I hope reading this has given you some idea about what I do at Abyss and what a particular data science role could be like. What were the biggest takeaways in the first year of your job?
