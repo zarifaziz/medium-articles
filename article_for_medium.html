@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Article</title>
+<style>
+body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.8; }
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; margin-top: 2em; }
+h3 { font-size: 1.2em; margin-top: 1.5em; }
+pre { background: #f5f5f5; padding: 16px; overflow-x: auto; border-radius: 4px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+th { background: #f5f5f5; }
+blockquote { border-left: 3px solid #ccc; margin-left: 0; padding-left: 1em; color: #666; }
+</style>
+</head><body>
+<h1>I Tried Every Prompt Optimization Framework. Here's What Actually Worked.</h1>
+<p>If you're building LLM systems in production, you've probably looked at prompt optimization frameworks — DSPy, GEPA, MIPRO. The pitch is compelling: define your pipeline, pick an optimizer, and let it search for better prompts automatically.</p>
+<p>I spent weeks going all in on this. Full optimization pipelines, hundreds of iterations, Weights &amp; Biases tracking, anti-memorization safeguards, stratified train/test splits. The works.</p>
+<p>The result? Marginal gains I couldn't replicate in production. Scores that fluctuated wildly between runs. An optimized judge that was simultaneously harsher <em>and</em> dumber. A "73% pass rate" inside the framework that dropped to 64% when I ran the same prompt through our actual eval pipeline.</p>
+<p>Then I tried something embarrassingly simple: I gave an AI agent a markdown file describing <em>how I optimize prompts</em>, pointed it at the codebase, and let it run experiments. It outperformed every framework I'd tried — and the improvements actually stuck in production.</p>
+<p>This article is about why prompt optimization frameworks break down at complexity, and what works instead.</p>
+<h2>Some Context</h2>
+<p>I'm Zarif, Lead AI Engineer at <a href="https://www.tutero.com">Tutero</a>, an ed-tech company building AI-powered tutoring for thousands of students across Australia. A core part of what we do is generate educational content at scale — 7+ different content types, each with its own generation pipeline.</p>
+<p>Each content type runs through the same pattern: a generation step that produces multiple candidates, a selection step that picks and refines the best one, and an LLM judge that scores the final output against our quality rubric.</p>
+<p>When you have this many content types, each with their own generation and scoring prompts, prompt engineering becomes a full-time job. So naturally, I went looking for ways to automate it.</p>
+<h2>The DSPy Experiment</h2>
+<p><a href="https://dspy.ai/">DSPy</a> is a prompt optimization framework out of Stanford. Instead of manually tweaking prompts, you define your pipeline programmatically and let an optimizer search for better instructions, few-shot examples, or both.</p>
+<p>I used GEPA (Genetic Pareto Optimization) specifically — a self-reflection algorithm where a teacher LLM reviews failures from the current prompt, proposes improvements, and iterates. It consistently outperforms MIPRO and other alternatives in DSPy.</p>
+<h3>The setup</h3>
+<p>We built a proper pipeline around it:</p>
+<pre><code class="language-python">config = DSPyOptimizerConfig(
+    node_type=&quot;ContentTypeA&quot;,
+
+    # Training data (200 synthetic examples)
+    generation_dataset_path=&quot;fixtures/generation_optimization/content_a_200samples.csv&quot;,
+
+    # Holdout test set (100 examples, never seen during optimization)
+    holdout_dataset_path=&quot;fixtures/api_evaluation_datasets/content_a_100samples.csv&quot;,
+
+    # Train/val split — GEPA needs largest trainset, smallest val
+    train_ratio=0.7,
+    val_ratio=0.3,
+
+    # Models
+    student_model=&quot;cerebras/gpt-oss-120b&quot;,   # Fast inference (~3500 TPS)
+    teacher_model=&quot;openai/gpt-5.2&quot;,           # Reflects on failures
+
+    # GEPA budget
+    max_optimization_evals=50,
+    reflection_minibatch_size=20,
+
+    # Anti-memorization safeguards
+    use_anti_memorization_system_prompt=True,
+
+    # W&amp;B tracking
+    wandb_project=&quot;content-a-generator-optimization&quot;,
+)
+
+optimized_prompt, output_path = optimize_generation_workflow(config)
+</code></pre>
+<p>Two-step pipeline: first optimize the judge (up to 300 GEPA iterations to align with human labels), then optimize the generator (up to 50 iterations using the calibrated judge as feedback). Anti-memorization safeguards, W&amp;B tracking, stratified splits — the whole nine yards.</p>
+<h3>What actually happened</h3>
+<p>It did <em>something</em>. Our pass rate on one content type went from 43% to 53%. But when I read the outputs, the judge had become miscalibrated — too harsh, failing things for trivial misunderstandings, not applying common sense. The score "improved" partly because DSPy created a stricter judge that happened to agree with itself more.</p>
+<p>The real kicker: <strong>when I extracted the optimized prompt and ran it through our normal eval pipeline, the score dropped from the 73% DSPy was reporting to 64%.</strong> Same prompt, same data — different scaffolding. The improvement was partially an artifact of DSPy's own evaluation setup.</p>
+<p>Scores were also inconsistent across runs with the same config: 45%, then 63%, then 60%, then 55%. I spent days trying to figure out what was real.</p>
+<h2>Why Frameworks Hit a Ceiling</h2>
+<p>The fundamental issue isn't that DSPy is bad software — it's well-built and the GEPA algorithm is genuinely clever. The problem is structural.</p>
+<h3>They can only see the prompt string</h3>
+<p>This is the fatal flaw.</p>
+<p>DSPy optimizes the <em>instruction text</em>. That's it. It can swap out few-shot examples, reword the system prompt, add constraints — all within the boundary of a single string.</p>
+<p>But when I sit down to improve a prompt, I'm not just editing text. I'm reading the scorer to understand <em>why</em> things fail. I'm inspecting traces to see if candidates are bad or if selection is bad. I'm checking if the response model constrains output in unexpected ways. I'm looking at the downstream service that parses the structured output. I'm considering whether the whole architecture should change.</p>
+<p>A framework has no visibility into any of this. It's optimizing one knob in a system with dozens.</p>
+<h3>They can't make architectural changes</h3>
+<p>Some of our biggest improvements had nothing to do with prompt wording. For example, we discovered that generating 3 candidates in a single LLM call caused them to be "entangled" — each candidate conditioned on the previous ones, leading to shared systematic flaws.</p>
+<p>The fix was architectural: split into 3 parallel independent calls, each generating 1 candidate.</p>
+<p>That single change — not a prompt edit — took our holdout pass rate from 70% to 79%. No prompt optimization framework would ever discover this. It requires understanding the code, the execution model, and the <em>reasons</em> behind failure patterns.</p>
+<h3>Optimized prompts don't transfer cleanly</h3>
+<p>Even when DSPy found a better prompt, integrating it was painful. The optimized prompt existed inside DSPy's module system with its own serialization format and runtime assumptions. Extracting it into our production template system required manual surgery every time.</p>
+<p>And often, the "optimized" prompt encoded specific training examples into the instructions (despite anti-memorization safeguards), or added constraints that made sense for 200 training samples but broke edge cases in production.</p>
+<h2>The Moment It Clicked</h2>
+<p>While I was wrestling with DSPy configs, I'd already been using an agentic coding tool for day-to-day development. One afternoon, frustrated after yet another DSPy run that produced a "better" prompt I couldn't use, I just asked the agent to look at some failing evaluations and tell me what was going wrong.</p>
+<p>It read the scorer prompt. It read the generation prompt. It pulled up trace logs. It spotted that the scorer was penalizing a certain answer format but the generation prompt had no rule against it. It edited the prompt, re-ran the eval, and the pass rate jumped 10 points.</p>
+<p>That entire loop — the exact same loop I'd been trying to automate with hundreds of lines of optimization pipeline code — happened in about 3 minutes. No optimizer. No GEPA iterations. Just an AI reading code, forming a hypothesis, and testing it.</p>
+<p>That was when I realized: I don't need an optimization algorithm. I need to encode my process into something an agent can follow, give it the same tools I use, and get out of its way.</p>
+<h2>What Actually Worked: Agent Skills</h2>
+<p>I formalized the approach into <strong>skills</strong> — structured markdown files that describe a workflow, reference key files, and give the agent the context it needs to work autonomously.</p>
+<p>A skill doesn't optimize a prompt string. It gives the agent the same workflow and tools that <em>I</em> use as a prompt engineer, and lets it operate.</p>
+<h3>What a skill looks like</h3>
+<p>Here's the core of our <strong>generator optimization skill</strong> — the actual markdown file the agent reads before starting:</p>
+<pre><code class="language-markdown"># Generator Prompt Optimization
+
+## Goal
+Maximize the judge pass rate for a given content type's generator prompt
+through iterative experimentation.
+
+## Core Philosophy
+You are an expert prompt engineer. Think architecturally about the
+problem - consider both low-level prompt edits AND high-level structural
+changes. Form hypotheses, run experiments, analyze results, iterate.
+
+**Trust but verify the judge.** If the judge fails an output, there's
+likely a real issue — but judges can be miscalibrated. Your first job is
+to validate that failures are legitimate before fixing the generator.
+</code></pre>
+<h3>The triage process</h3>
+<p>Then comes the part I think matters most — the triage process. This is where expert heuristics live, and it's the thing no framework can replicate:</p>
+<pre><code class="language-markdown">## Triage Before Analysis
+
+Before running clustering or batch analysis, manually inspect 3-5
+FAIL cases:
+
+1. **Read the critique reasoning**, not just the verdict
+2. **Ask: Is this critique correct?**
+   - If clearly wrong → Stop. Flag to human. Exit optimization.
+   - If correct but trivial → Note it, check for pattern
+   - If correct and substantive → This is your optimization target
+
+**Early exit rule**: If you find an obviously wrong critique in your
+first 5 cases, exit and ask your superior to fix the judge.
+Don't analyze 50 failures with a broken judge.
+
+**Greedy fixing**: If you find an obvious, high-impact fix in your
+first few cases, make it immediately and re-run.
+</code></pre>
+<h3>Thinking beyond prompt text</h3>
+<p>And the scope — this is key. The skill explicitly tells the agent to think beyond prompt text:</p>
+<pre><code class="language-markdown">## Experimentation Mindset
+
+Consider beyond prompt edits:
+- **Ensemble pattern** for content types with low pass rates
+- **Scaling inference time compute** to let the LLM think longer
+- **Chain-of-thought fields** to help models reason before output
+- **Prompt chains** — multiple focused calls vs one overloaded call
+- **Complexity rebalancing** between generation and selection
+</code></pre>
+<p>We have similar skills for judge optimization (with decision trees for diagnosing model-vs-human disagreements) and for running prompt experiments in isolated git worktrees. They all follow the same principle: encode your expertise, provide the tools, let the agent operate.</p>
+<h3>What the agent actually does</h3>
+<p>Here's what an actual optimization session looks like:</p>
+<pre><code class="language-bash"># Agent reads the relevant files first
+&gt; Read src/prompting/tasks/content_type_a.py
+&gt; Read src/prompting/scorers/content_type_a.py
+&gt; Read src/prompting/tasks/common.py
+
+# Runs a baseline evaluation
+&gt; uv run python -m prompting.commands.evaluate \
+    --source synthetic --node-type ContentTypeA --quantity 50
+# → Pass rate: 24% (12/50)
+
+# Inspects failures — reads the judge's critique, not just the verdict
+&gt; uv run python -m prompting.commands.analyze \
+    data/eval_results/content_a_eval.csv \
+    --disagreements-only
+
+# Spots a pattern: &quot;Answers are using yes/no format&quot;
+# Forms hypothesis: ban binary answer formats in generation prompt
+
+# Edits the prompt template directly in the codebase
+&gt; Edit src/prompting/tasks/content_type_a.py
+  + &quot;NEVER use yes/no questions or binary answer formats&quot;
+
+# Re-runs evaluation
+&gt; uv run python -m prompting.commands.evaluate \
+    --source synthetic --node-type ContentTypeA --quantity 50
+# → Pass rate: 34% (17/50) — +10pp improvement
+
+# Commits, then continues with next hypothesis...
+&gt; git commit -m &quot;content_type_a: ban binary answer formats&quot;
+</code></pre>
+<p>This is exactly what I do. Except it does it faster, doesn't get tired, and can run experiments back-to-back while I'm in meetings.</p>
+<h3>No extraction step</h3>
+<p>The crucial thing: because the agent operates in the actual codebase, every improvement is <em>immediately</em> integrated. There's no extraction step, no manual surgery, no replication gap. It edits the real files, runs the real eval pipeline, and commits the real changes.</p>
+<h2>Real Results</h2>
+<p>Here are actual numbers from our agent-driven optimization.</p>
+<h3>Content Type A (Complex with Context Dependencies)</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Baseline</th>
+<th>After Agent</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Training (50 samples)</td>
+<td>24%</td>
+<td>44-56%</td>
+<td>+20-32pp</td>
+</tr>
+<tr>
+<td>Holdout (100 samples)</td>
+<td>40%</td>
+<td>60%</td>
+<td><strong>+20pp</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The agent made 7 distinct changes including structural fixes, selection improvements, and generation tweaks. It also identified that ~3% of remaining failures were judge miscalibration — not something it could fix from the generator side.</p>
+<h3>Content Type B (Ensemble Experiment)</h3>
+<table>
+<thead>
+<tr>
+<th>Run</th>
+<th>n</th>
+<th>Pass Rate</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline (pre-optimization)</td>
+<td>100</td>
+<td>62%</td>
+<td>Pre-commit</td>
+</tr>
+<tr>
+<td>Baseline (committed)</td>
+<td>100</td>
+<td>70%</td>
+<td>Committed</td>
+</tr>
+<tr>
+<td>Independent gen (parallel)</td>
+<td>50</td>
+<td>80%</td>
+<td>Training</td>
+</tr>
+<tr>
+<td><strong>Holdout (unseen data)</strong></td>
+<td><strong>100</strong></td>
+<td><strong>79%</strong></td>
+<td><strong>Holdout</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The key change was architectural: switching from sequential to parallel independent generation. The agent also documented what <em>didn't</em> work — 5 candidates in 1 call (56%), end-of-prompt reminders (regression) — which is exactly the kind of negative result logging that frameworks never give you.</p>
+<h3>What didn't work matters too</h3>
+<p>That negative result logging deserves emphasis. When DSPy runs 50 iterations, the failed attempts just vanish into W&amp;B noise. But when an agent tries something, sees it regress, and documents <em>why</em> it didn't work, that knowledge compounds. Future optimization sessions can skip dead ends.</p>
+<h3>Across All Content Types</h3>
+<p>Once we let the agent drive optimization across all 7+ content types, we saw pass rate improvements ranging from <strong>+7pp to +55pp</strong> depending on the content type. Every single one improved.</p>
+<h2>The Broader Pattern: Get Out of the Way</h2>
+<p>This isn't just a prompt engineering insight. There's a growing recognition across AI tooling that the best way to get results from LLMs is to <em>stop constraining them</em>.</p>
+<p>The Amp team wrote about <a href="https://ampcode.com/notes/how-to-build-an-agent">building a coding agent</a> in under 400 lines of code. Their thesis: an agent is just an LLM, a loop, and enough tokens. The magic isn't in the framework — it's in getting out of the model's way.</p>
+<p>Mario Zechner built <a href="https://mariozechner.at/posts/2025-11-30-pi-coding-agent/">pi</a>, a minimal coding agent with four tools, a system prompt under 1,000 tokens, and no artificial constraints. It competed with agents 10x its complexity.</p>
+<p><a href="https://x.com/HamelHusain">Hamel Husain</a> — who's worked with 50+ companies on LLM evals — recently released <a href="https://github.com/hamelsmu/evals-skills">evals-skills</a>, an open-source set of skills that teach AI agents how to build evaluations, audit pipelines, analyze errors, and write judge prompts. Same pattern: encode expert knowledge into skill files, give the agent tools, let it work. The fact that someone with that breadth of experience arrived at the same approach independently is telling.</p>
+<p>The pattern keeps showing up: <strong>the less you constrain the model, the better it performs.</strong> Frameworks constrain. Rigid optimization algorithms constrain. A skill file that says "here's the goal, here are the tools, here's how I think about the problem — now go" gives the model room to actually <em>think</em>.</p>
+<h3>Side-by-side comparison</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Framework (DSPy/GEPA)</th>
+<th>Agent + Skill</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Search space</strong></td>
+<td>Prompt string only</td>
+<td>Entire codebase</td>
+</tr>
+<tr>
+<td><strong>Can edit code</strong></td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>Architectural changes</strong></td>
+<td>Impossible</td>
+<td>First-class</td>
+</tr>
+<tr>
+<td><strong>Integration</strong></td>
+<td>Manual extraction</td>
+<td>Already in codebase</td>
+</tr>
+<tr>
+<td><strong>Failure diagnosis</strong></td>
+<td>Metric goes up/down</td>
+<td>Reads critiques, traces, logs</td>
+</tr>
+<tr>
+<td><strong>Human oversight</strong></td>
+<td>Post-hoc review</td>
+<td>Real-time steering</td>
+</tr>
+<tr>
+<td><strong>Negative results</strong></td>
+<td>Lost</td>
+<td>Documented</td>
+</tr>
+</tbody>
+</table>
+<h2>Takeaways</h2>
+<ul>
+<li>
+<p><strong>Prompt optimization frameworks work for demos and simple systems.</strong> If you have a single-step prompt with a clean metric, DSPy with GEPA can genuinely help. Don't dismiss them entirely.</p>
+</li>
+<li>
+<p><strong>They break down at complexity.</strong> The moment your system has multiple interacting prompts, architectural decisions, downstream parsers, or requires common-sense judgment about failures, algorithmic optimization hits a wall.</p>
+</li>
+<li>
+<p><strong>The fundamental limitation is scope.</strong> Frameworks optimize the prompt string. But the prompt is one part of a system. The biggest wins come from architectural changes that no string optimizer would ever propose.</p>
+</li>
+<li>
+<p><strong>Agent skills &gt; algorithms.</strong> Encoding your expertise into a skill file and giving a capable agent the same tools you use is more effective, more transparent, and more flexible.</p>
+</li>
+<li>
+<p><strong>You still need good eval tooling.</strong> None of this works without reliable, fast evaluation pipelines. The agent needs to be able to run experiments and see results. Invest in your eval infrastructure first.</p>
+</li>
+<li>
+<p><strong>The human stays in the loop.</strong> This isn't about replacing prompt engineers. It's about amplifying what they can do. The skill file is where your expertise lives. The agent is what executes it at scale.</p>
+</li>
+</ul>
+<p>If you're spending weeks wrestling with prompt optimization frameworks and not seeing gains that stick, try the dumb thing first: write down how <em>you</em> optimize prompts, hand that document to a good AI agent, and let it rip.</p>
+<p><em>Zarif Aziz is the Lead AI Engineer at <a href="https://www.tutero.com">Tutero</a>, where he builds AI-powered educational content generation systems serving thousands of students across Australia. Connect with him on <a href="https://x.com/zarifaziz_">Twitter</a> or <a href="https://www.linkedin.com/in/zarifaziz/">LinkedIn</a>.</em></p>
+</body></html>
