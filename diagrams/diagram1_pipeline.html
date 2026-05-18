@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; }
+.container { background: white; border-radius: 16px; padding: 40px 50px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.title { text-align: center; font-size: 14px; color: #666; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 30px; }
+.flow { display: flex; align-items: center; gap: 0; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.box { padding: 18px 28px; border-radius: 12px; font-size: 16px; font-weight: 600; color: white; text-align: center; min-width: 180px; }
+.box-sub { font-size: 12px; font-weight: 400; opacity: 0.85; margin-top: 4px; }
+.gen { background: linear-gradient(135deg, #6366f1, #818cf8); }
+.sel { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+.judge { background: linear-gradient(135deg, #10b981, #34d399); }
+.arrow { font-size: 28px; color: #cbd5e1; margin: 0 12px; font-weight: 300; }
+.label { font-size: 11px; color: #94a3b8; font-weight: 500; }
+</style>
+</head><body>
+<div class="container">
+  <div class="title">Content Generation Pipeline</div>
+  <div class="flow">
+    <div class="step">
+      <div class="box gen">
+        Generation
+        <div class="box-sub">N parallel calls</div>
+      </div>
+      <div class="label">Produce candidates</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="box sel">
+        Selection &amp; Refine
+        <div class="box-sub">Pick best, polish</div>
+      </div>
+      <div class="label">Choose &amp; improve</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="box judge">
+        LLM Judge
+        <div class="box-sub">PASS / FAIL + critique</div>
+      </div>
+      <div class="label">Quality gate</div>
+    </div>
+  </div>
+</div>
+</body></html>

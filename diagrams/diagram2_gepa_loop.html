@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; }
+.container { background: white; border-radius: 16px; padding: 40px 50px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); max-width: 720px; }
+.title { text-align: center; font-size: 14px; color: #666; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 32px; }
+.loop-container { position: relative; }
+.steps { display: flex; flex-direction: column; gap: 16px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.num { width: 32px; height: 32px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.step-box { flex: 1; padding: 14px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; }
+.step-desc { font-size: 12px; color: #64748b; font-weight: 400; margin-top: 2px; }
+.s1 { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+.s2 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.s3 { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.s4 { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.s5 { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.s6 { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+.loop-arrow { text-align: center; margin-top: 16px; padding: 10px; background: #f1f5f9; border-radius: 8px; font-size: 13px; color: #475569; font-weight: 500; }
+.loop-arrow span { color: #6366f1; font-weight: 700; }
+</style>
+</head><body>
+<div class="container">
+  <div class="title">GEPA Optimization Loop</div>
+  <div class="loop-container">
+    <div class="steps">
+      <div class="row">
+        <div class="num">1</div>
+        <div class="step-box s1">
+          Current Prompt
+          <div class="step-desc">Start with baseline instruction</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="num">2</div>
+        <div class="step-box s2">
+          Run on Training Batch
+          <div class="step-desc">Generate outputs for N examples</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="num">3</div>
+        <div class="step-box s3">
+          Judge Evaluates
+          <div class="step-desc">Score each output PASS/FAIL</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="num">4</div>
+        <div class="step-box s4">
+          Teacher LLM Reflects on Failures
+          <div class="step-desc">Analyze why outputs failed, identify patterns</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="num">5</div>
+        <div class="step-box s5">
+          Propose Improved Instruction
+          <div class="step-desc">Generate new prompt based on failure analysis</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="num">6</div>
+        <div class="step-box s6">
+          Compare to Best So Far
+          <div class="step-desc">Keep if better, discard if not</div>
+        </div>
+      </div>
+    </div>
+    <div class="loop-arrow">
+      <span>↻</span> Repeat for up to 50 iterations
+    </div>
+  </div>
+</div>
+</body></html>

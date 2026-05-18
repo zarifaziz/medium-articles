@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #f8f9fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; }
+.container { background: white; border-radius: 16px; padding: 40px 50px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.title { text-align: center; font-size: 14px; color: #666; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 32px; }
+.comparison { display: flex; gap: 32px; }
+.side { flex: 1; min-width: 280px; }
+.side-title { text-align: center; font-size: 15px; font-weight: 700; margin-bottom: 16px; padding: 10px; border-radius: 8px; }
+.framework-title { background: #fee2e2; color: #991b1b; }
+.agent-title { background: #dcfce7; color: #166534; }
+.items { display: flex; flex-direction: column; gap: 6px; }
+.item { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.item-icon { font-size: 14px; flex-shrink: 0; }
+.framework .item { background: #fef2f2; color: #7f1d1d; border: 1px solid #fecaca; }
+.framework .dim { background: #f9fafb; color: #d1d5db; border: 1px solid #e5e7eb; }
+.agent .item { background: #f0fdf4; color: #14532d; border: 1px solid #bbf7d0; }
+.vs { display: flex; align-items: center; font-size: 24px; font-weight: 800; color: #cbd5e1; padding-top: 40px; }
+</style>
+</head><body>
+<div class="container">
+  <div class="title">What can each approach see?</div>
+  <div class="comparison">
+    <div class="side framework">
+      <div class="side-title framework-title">Framework (DSPy)</div>
+      <div class="items">
+        <div class="item"><span class="item-icon">✅</span> Prompt instruction string</div>
+        <div class="item dim"><span class="item-icon">❌</span> Generator prompt</div>
+        <div class="item dim"><span class="item-icon">❌</span> Selector prompt</div>
+        <div class="item dim"><span class="item-icon">❌</span> Judge prompt</div>
+        <div class="item dim"><span class="item-icon">❌</span> Response models</div>
+        <div class="item dim"><span class="item-icon">❌</span> Task functions</div>
+        <div class="item dim"><span class="item-icon">❌</span> Trace logs</div>
+        <div class="item dim"><span class="item-icon">❌</span> Downstream parsers</div>
+        <div class="item dim"><span class="item-icon">❌</span> Pipeline code</div>
+        <div class="item dim"><span class="item-icon">❌</span> Template engine</div>
+        <div class="item dim"><span class="item-icon">❌</span> Eval tooling</div>
+        <div class="item dim"><span class="item-icon">❌</span> Git history</div>
+      </div>
+    </div>
+    <div class="vs">vs</div>
+    <div class="side agent">
+      <div class="side-title agent-title">Agent + Skill</div>
+      <div class="items">
+        <div class="item"><span class="item-icon">✅</span> Prompt instruction string</div>
+        <div class="item"><span class="item-icon">✅</span> Generator prompt</div>
+        <div class="item"><span class="item-icon">✅</span> Selector prompt</div>
+        <div class="item"><span class="item-icon">✅</span> Judge prompt</div>
+        <div class="item"><span class="item-icon">✅</span> Response models</div>
+        <div class="item"><span class="item-icon">✅</span> Task functions</div>
+        <div class="item"><span class="item-icon">✅</span> Trace logs</div>
+        <div class="item"><span class="item-icon">✅</span> Downstream parsers</div>
+        <div class="item"><span class="item-icon">✅</span> Pipeline code</div>
+        <div class="item"><span class="item-icon">✅</span> Template engine</div>
+        <div class="item"><span class="item-icon">✅</span> Eval tooling</div>
+        <div class="item"><span class="item-icon">✅</span> Git history</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
