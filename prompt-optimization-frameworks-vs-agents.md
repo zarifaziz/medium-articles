@@ -276,15 +276,13 @@ Once we let the agent drive optimization across all 7+ content types, we saw pas
 
 ## The Broader Pattern: Get Out of the Way
 
-This isn't just a prompt engineering insight. There's a growing recognition across AI tooling that the best way to get results from LLMs is to *stop constraining them*.
+This isn't just a prompt engineering insight. Amp, Hamel Husain, and others I mentioned earlier all arrived at the same conclusion from completely different starting points — coding agents, eval pipelines, prompt optimisation. But they're not alone.
 
-The Amp team wrote about [building a coding agent](https://ampcode.com/notes/how-to-build-an-agent) in under 400 lines of code. Their thesis: an agent is just an LLM, a loop, and enough tokens. The magic isn't in the framework — it's in getting out of the model's way.
+Mario Zechner built [pi](https://mariozechner.at/posts/2025-11-30-pi-coding-agent/), a minimal coding agent with four tools, a system prompt under 1,000 tokens, and no artificial constraints. It competed with agents 10x its complexity. Amp [noticed](https://ampcode.com/notes/agents-for-the-agent) that Claude naturally wanted to delegate to subagents, so instead of constraining that behaviour, they enabled it.
 
-Mario Zechner built [pi](https://mariozechner.at/posts/2025-11-30-pi-coding-agent/), a minimal coding agent with four tools, a system prompt under 1,000 tokens, and no artificial constraints. It competed with agents 10x its complexity.
+What's striking is the convergence. These projects all started with different problems and independently stripped away framework overhead until they reached the same minimal core: give the model tools and context, then get out of its way.
 
-[Hamel Husain](https://x.com/HamelHusain) — who's worked with 50+ companies on LLM evals — recently released [evals-skills](https://github.com/hamelsmu/evals-skills), an open-source set of skills that teach AI agents how to build evaluations, audit pipelines, analyze errors, and write judge prompts. Same pattern: encode expert knowledge into skill files, give the agent tools, let it work. The fact that someone with that breadth of experience arrived at the same approach independently is telling.
-
-The pattern keeps showing up: **the less you constrain the model, the better it performs.** Frameworks constrain. Rigid optimization algorithms constrain. A skill file that says "here's the goal, here are the tools, here's how I think about the problem — now go" gives the model room to actually *think*.
+**The less you constrain the model, the better it performs.** Frameworks constrain. Rigid optimisation algorithms constrain. A skill file that says "here's the goal, here are the tools, here's how I think about the problem — now go" gives the AI room to actually *think*.
 
 ### Side-by-side comparison
 
